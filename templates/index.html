@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payslip (local)</title>
+  <style>
+    :root {
+      font-family: system-ui, sans-serif;
+      line-height: 1.4;
+    }
+
+    body {
+      margin: 0;
+      padding: 1rem;
+      background: #f4f4f4;
+      color: #111;
+    }
+
+    h1 {
+      font-size: 1.1rem;
+      margin: 0 0 0.75rem;
+      font-weight: 600;
+    }
+
+    fieldset {
+      border: 1px solid #ccc;
+      margin: 0 0 1rem;
+      padding: 0.75rem;
+      background: #fff;
+    }
+
+    legend {
+      padding: 0 0.35rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      margin: 0.35rem 0 0.15rem;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      max-width: 22rem;
+      padding: 0.35rem 0.45rem;
+      box-sizing: border-box;
+      border: 1px solid #aaa;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.25rem;
+    }
+
+    .row > div {
+      min-width: 10rem;
+    }
+
+    .autocomplete-wrap {
+      position: relative;
+      max-width: 22rem;
+    }
+
+    #nameSuggestions {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      z-index: 10;
+      background: #fff;
+      border: 1px solid #aaa;
+      border-top: none;
+      max-height: 10rem;
+      overflow-y: auto;
+      display: none;
+    }
+
+    #nameSuggestions button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 0.35rem 0.5rem;
+      border: none;
+      background: #fff;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    #nameSuggestions button:hover,
+    #nameSuggestions button:focus {
+      background: #e8e8e8;
+    }
+
+    .calc-block {
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+      background: #fafafa;
+      border: 1px dashed #bbb;
+      padding: 0.5rem 0.65rem;
+      max-width: 36rem;
+    }
+
+    .calc-block div {
+      margin: 0.15rem 0;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 0.5rem 0 1rem;
+    }
+
+    button.action {
+      padding: 0.45rem 0.75rem;
+      border: 1px solid #333;
+      background: #eee;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    button.action:hover {
+      background: #ddd;
+    }
+
+    /*
+      PAYSLIP LAYOUT — coordinates from top-left of 7in × 7.5in sheet (cm).
+      Order: Basic pay → OT → Sunday → Allowance → Work hours → OT detail strip
+      → Gross (RM + amount) → Advance → Total reduction (RM + amount) → Bal.
+    */
+    .payslip-sheet {
+      position: relative;
+      width: 7in;
+      height: 7.5in;
+      box-sizing: border-box;
+      background: #fff;
+    }
+
+    .payslip-sheet .abs {
+      position: absolute;
+      white-space: nowrap;
+      font-size: 10pt;
+    }
+
+    .payslip-sheet .slip-line.payslip-omit,
+    .payslip-sheet .slip-line-ot-detail.payslip-omit {
+      display: none !important;
+    }
+
+    /* RM column: left 8cm, width 1.65cm; Sen column at 9.85cm */
+    .payslip-sheet .slip-currency-rm {
+      position: absolute;
+      width: 1.65cm;
+      max-width: 1.65cm;
+      text-align: right;
+      font-size: 10pt;
+      white-space: nowrap;
+    }
+
+    .payslip-sheet .slip-currency-sen {
+      position: absolute;
+      text-align: left;
+      font-size: 10pt;
+      white-space: nowrap;
+    }
+
+    .payslip-sheet .slip-line-prefix,
+    .payslip-sheet .slip-line-label {
+      position: absolute;
+      text-align: left;
+      font-size: 10pt;
+    }
+
+    #slipDate {
+      top: 2.5cm;
+      left: 12.5cm;
+    }
+    #slipName {
+      top: 3.7cm;
+      left: 2.6cm;
+      font-size: 20pt;
+      line-height: 1.1;
+    }
+    #slipIc {
+      top: 4cm;
+      left: 12.8cm;
+    }
+
+    /* Basic pay row — shifted up 0.15cm */
+    #slipBasicCalc {
+      top: 5.45cm;
+      left: 4.8cm;
+    }
+    #slipBasicTotalRM {
+      top: 5.45cm;
+      left: 8cm;
+    }
+    #slipBasicTotalSen {
+      top: 5.45cm;
+      left: 9.85cm;
+    }
+
+    /* OT row */
+    #slipOtCalc {
+      top: 5.95cm;
+      left: 4.8cm;
+    }
+    #slipOtTotalRM {
+      top: 5.95cm;
+      left: 8cm;
+    }
+    #slipOtTotalSen {
+      top: 5.95cm;
+      left: 9.85cm;
+    }
+
+    /* Sunday row */
+    #slipSunCalc {
+      top: 6.55cm;
+      left: 4.8cm;
+    }
+    #slipSunTotalRM {
+      top: 6.55cm;
+      left: 8cm;
+    }
+    #slipSunTotalSen {
+      top: 6.55cm;
+      left: 9.85cm;
+    }
+
+    /* Allowance row */
+    #slipAllowCalc {
+      top: 7.05cm;
+      left: 4.8cm;
+    }
+    #slipAllowTotalRM {
+      top: 7.05cm;
+      left: 8cm;
+    }
+    #slipAllowTotalSen {
+      top: 7.05cm;
+      left: 9.85cm;
+    }
+
+    /* Work hours row */
+    #slipWhCalc {
+      top: 7.65cm;
+      left: 4.8cm;
+    }
+    #slipWhTotalRM {
+      top: 7.65cm;
+      left: 8cm;
+    }
+    #slipWhTotalSen {
+      top: 7.65cm;
+      left: 9.85cm;
+    }
+
+    /* OT breakdown strip */
+    #slipOtDetailRate {
+      top: 6.9cm;
+      left: 11.1cm;
+    }
+    #slipOtDetailHours {
+      top: 6.9cm;
+      left: 13.5cm;
+    }
+    #slipOtDetailAmount {
+      top: 6.9cm;
+      left: 15.8cm;
+    }
+
+    /* Gross pay 8.4cm */
+    #slipGrossRmWord {
+      top: 8.4cm;
+      left: 7.2cm;
+    }
+    #slipGrossRM {
+      top: 8.4cm;
+      left: 8cm;
+    }
+    #slipGrossSen {
+      top: 8.4cm;
+      left: 9.85cm;
+    }
+
+    /* Advance 10.1cm */
+    #slipAdvanceRM {
+      top: 10.1cm;
+      left: 8cm;
+    }
+    #slipAdvanceSen {
+      top: 10.1cm;
+      left: 9.85cm;
+    }
+
+    /* Total reduction 11.9cm */
+    #slipReductionRmWord {
+      top: 11.9cm;
+      left: 7.2cm;
+    }
+    #slipReductionRM {
+      top: 11.9cm;
+      left: 8cm;
+    }
+    #slipReductionSen {
+      top: 11.9cm;
+      left: 9.85cm;
+    }
+
+    /* Balance 14.4cm — "Bal." aligned with "RM" labels */
+    #slipBalWord {
+      top: 14.4cm;
+      left: 7.2cm;
+    }
+    #slipBalanceRM {
+      top: 14.4cm;
+      left: 8cm;
+    }
+    #slipBalanceSen {
+      top: 14.4cm;
+      left: 9.85cm;
+    }
+
+    #payslip-viewport {
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: #e2e2e2;
+      display: inline-block;
+    }
+
+    #payslip-viewport .payslip-sheet {
+      outline: 1px solid #333;
+      box-shadow: 0 0 0 1px #999;
+    }
+
+    .mode-preview #data-entry-panel {
+      display: none;
+    }
+
+    .hint {
+      font-size: 0.8rem;
+      color: #444;
+      margin: 0.25rem 0 0;
+    }
+
+    @media print {
+      @page {
+        size: 7in 7.5in;
+        margin: 0;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        background: #fff;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+
+      #payslip-viewport {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        display: block !important;
+      }
+
+      #payslip-viewport .payslip-sheet {
+        outline: none;
+        box-shadow: none;
+      }
+
+      .payslip-sheet .slip-currency-rm {
+        width: 1.65cm;
+        max-width: 1.65cm;
+        text-align: right;
+      }
+
+      .payslip-sheet .slip-currency-sen {
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1 class="no-print">Employee payslip (local)</h1>
+
+  <div id="app-root">
+    <div id="data-entry-panel" class="no-print">
+      <fieldset>
+        <legend>Employee</legend>
+        <div class="row">
+          <div class="autocomplete-wrap">
+            <label for="employeeName">Name</label>
+            <input type="text" id="employeeName" autocomplete="off" />
+            <div id="nameSuggestions" role="listbox"></div>
+            <p class="hint">Type to search. Pick a row to fill IC and daily rate, or enter a new employee manually.</p>
+          </div>
+          <div>
+            <label for="employeeIc">IC</label>
+            <input type="text" id="employeeIc" />
+          </div>
+          <div>
+            <label for="slipDateInput">Payslip date</label>
+            <input type="date" id="slipDateInput" />
+          </div>
+          <div>
+            <label for="salaryPerDay">Daily rate</label>
+            <input type="number" id="salaryPerDay" step="0.01" min="0" />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Work &amp; pay inputs</legend>
+        <div class="row">
+          <div><label for="numDays">Days worked</label><input type="number" id="numDays" step="0.5" min="0" /></div>
+          <div><label for="numHours">Hours (weekday)</label><input type="number" id="numHours" step="0.25" min="0" /></div>
+          <div><label for="sundayHours">Sunday hours</label><input type="number" id="sundayHours" step="0.25" min="0" /></div>
+          <div><label for="otHours">OT hours</label><input type="number" id="otHours" step="0.25" min="0" /></div>
+          <div><label for="allowancePerDay">Allowance / day</label><input type="number" id="allowancePerDay" step="0.01" min="0" /></div>
+          <div><label for="advance">Advance taken</label><input type="number" id="advance" step="0.01" min="0" /></div>
+        </div>
+      </fieldset>
+
+      <div class="actions">
+        <button type="button" class="action" id="btnRecalc">Recalculate</button>
+        <button type="button" class="action" id="btnPreview">Preview payslip</button>
+      </div>
+
+      <div class="calc-block">
+        <strong>Calculation</strong>
+        <div id="lineSalaryDays"></div>
+        <div id="lineSalaryHours"></div>
+        <div id="lineSunday"></div>
+        <div id="lineOT"></div>
+        <div id="lineAllowance"></div>
+        <div id="lineTotalSalary"></div>
+        <div id="lineAdvance"></div>
+        <div id="lineBalance"></div>
+      </div>
+    </div>
+
+    <div id="preview-panel" class="no-print" hidden>
+      <div class="actions">
+        <button type="button" class="action" id="btnPrint">Print</button>
+        <button type="button" class="action" id="btnBackEdit">Back to data entry</button>
+      </div>
+      <p class="hint">Paper box is 7in × 7.5in. Positions are fixed in <code>cm</code> in CSS to match your pre-printed form.</p>
+    </div>
+
+    <div id="payslip-viewport" hidden>
+      <div id="payslip-sheet" class="payslip-sheet" aria-label="Payslip print area">
+        <span class="abs" id="slipDate"></span>
+        <span class="abs" id="slipName"></span>
+        <span class="abs" id="slipIc"></span>
+
+        <div id="slipLineBasic" class="slip-line">
+          <span class="slip-line-prefix abs" id="slipBasicCalc"></span>
+          <span class="slip-currency-rm abs" id="slipBasicTotalRM"></span>
+          <span class="slip-currency-sen abs" id="slipBasicTotalSen"></span>
+        </div>
+
+        <div id="slipLineOt" class="slip-line">
+          <span class="slip-line-prefix abs" id="slipOtCalc"></span>
+          <span class="slip-currency-rm abs" id="slipOtTotalRM"></span>
+          <span class="slip-currency-sen abs" id="slipOtTotalSen"></span>
+        </div>
+
+        <div id="slipLineSunday" class="slip-line">
+          <span class="slip-line-prefix abs" id="slipSunCalc"></span>
+          <span class="slip-currency-rm abs" id="slipSunTotalRM"></span>
+          <span class="slip-currency-sen abs" id="slipSunTotalSen"></span>
+        </div>
+
+        <div id="slipLineAllow" class="slip-line">
+          <span class="slip-line-prefix abs" id="slipAllowCalc"></span>
+          <span class="slip-currency-rm abs" id="slipAllowTotalRM"></span>
+          <span class="slip-currency-sen abs" id="slipAllowTotalSen"></span>
+        </div>
+
+        <div id="slipLineWh" class="slip-line">
+          <span class="slip-line-prefix abs" id="slipWhCalc"></span>
+          <span class="slip-currency-rm abs" id="slipWhTotalRM"></span>
+          <span class="slip-currency-sen abs" id="slipWhTotalSen"></span>
+        </div>
+
+        <div id="slipLineOtDetail" class="slip-line-ot-detail">
+          <span class="abs" id="slipOtDetailRate"></span>
+          <span class="abs" id="slipOtDetailHours"></span>
+          <span class="abs" id="slipOtDetailAmount"></span>
+        </div>
+
+        <div id="slipLineGross" class="slip-line">
+          <span class="slip-line-label abs" id="slipGrossRmWord">RM</span>
+          <span class="slip-currency-rm abs" id="slipGrossRM"></span>
+          <span class="slip-currency-sen abs" id="slipGrossSen"></span>
+        </div>
+
+        <div id="slipLineAdvance" class="slip-line">
+          <span class="slip-currency-rm abs" id="slipAdvanceRM"></span>
+          <span class="slip-currency-sen abs" id="slipAdvanceSen"></span>
+        </div>
+
+        <div id="slipLineReduction" class="slip-line">
+          <span class="slip-line-label abs" id="slipReductionRmWord">RM</span>
+          <span class="slip-currency-rm abs" id="slipReductionRM"></span>
+          <span class="slip-currency-sen abs" id="slipReductionSen"></span>
+        </div>
+
+        <div id="slipLineBalance" class="slip-line">
+          <span class="slip-line-label abs" id="slipBalWord">Bal.</span>
+          <span class="slip-currency-rm abs" id="slipBalanceRM"></span>
+          <span class="slip-currency-sen abs" id="slipBalanceSen"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let selectedFromList = false;
+    let searchTimer = null;
+
+    const $ = (id) => document.getElementById(id);
+
+    function money(n) {
+      const x = Number(n);
+      if (!Number.isFinite(x)) return "0.00";
+      return x.toFixed(2);
+    }
+
+    /**
+     * Split a currency amount into Ringgit (whole) and Sen (two digits, no decimal printed).
+     * Example: 123.5 -> { rm: "123", sen: "50" }; 45 -> { rm: "45", sen: "00" }.
+     */
+    function splitRinggitSen(value) {
+      const x = Number(value);
+      if (!Number.isFinite(x)) return { rm: "0", sen: "00" };
+      const sign = x < 0 ? "-" : "";
+      const abs = Math.abs(x);
+      const cents = Math.round(abs * 100 + Number.EPSILON);
+      const rmPart = Math.floor(cents / 100);
+      const senPart = cents % 100;
+      return {
+        rm: sign + String(rmPart),
+        sen: String(senPart).padStart(2, "0"),
+      };
+    }
+
+    function setRMSen(elRm, elSen, value) {
+      const { rm, sen } = splitRinggitSen(value);
+      elRm.textContent = rm;
+      elSen.textContent = sen;
+    }
+
+    function isEffectivelyZero(n) {
+      const x = Number(n);
+      if (!Number.isFinite(x)) return true;
+      return Math.abs(x) < 0.0005;
+    }
+
+    /** Hide a payslip row when its primary monetary amount is zero. */
+    function setSlipLineOmit(lineEl, amountForOmit, fillFn) {
+      if (isEffectivelyZero(amountForOmit)) {
+        lineEl.classList.add("payslip-omit");
+        return;
+      }
+      lineEl.classList.remove("payslip-omit");
+      fillFn();
+    }
+
+    function calculateSalary() {
+      const salaryPerDay = parseFloat($("salaryPerDay").value) || 0;
+      const numDays = parseFloat($("numDays").value) || 0;
+      const numHours = parseFloat($("numHours").value) || 0;
+      const sundayHours = parseFloat($("sundayHours").value) || 0;
+      const otHours = parseFloat($("otHours").value) || 0;
+      const allowancePerDay = parseFloat($("allowancePerDay").value) || 0;
+      const advance = parseFloat($("advance").value) || 0;
+
+      const salaryPerHour = parseFloat((salaryPerDay / 8).toFixed(2));
+      const sundayPayRate = parseFloat(((salaryPerDay * 2) / 8).toFixed(2));
+      const otPayRate = parseFloat((salaryPerHour * 1.5).toFixed(2));
+
+      const salaryForDays = salaryPerDay * numDays;
+      const salaryForHours = numHours * salaryPerHour;
+      const salaryForSunday = sundayHours * sundayPayRate;
+      const salaryForOT = otHours * otPayRate;
+      const totalAllowance = allowancePerDay * numDays;
+      const totalSalary = salaryForDays + salaryForHours + salaryForSunday + salaryForOT + totalAllowance;
+      const balance = totalSalary - advance;
+
+      $("lineSalaryDays").textContent =
+        `${numDays} days × ${money(salaryPerDay)} = ${money(salaryForDays)}`;
+      $("lineSalaryHours").textContent =
+        `${numHours} hrs × ${money(salaryPerHour)} = ${money(salaryForHours)}`;
+      $("lineSunday").textContent =
+        `Sunday ${sundayHours} hrs × ${money(sundayPayRate)} = ${money(salaryForSunday)}`;
+      $("lineOT").textContent =
+        `${otHours} hrs × ${money(otPayRate)} = ${money(salaryForOT)}`;
+      $("lineAllowance").textContent =
+        `${numDays} days × ${money(allowancePerDay)} = ${money(totalAllowance)}`;
+      $("lineTotalSalary").textContent = `totalSalary: ${money(totalSalary)}`;
+      $("lineAdvance").textContent = `advanceTaken: ${money(advance)}`;
+      $("lineBalance").textContent = `balance: ${money(balance)}`;
+
+      return {
+        salaryPerDay,
+        numDays,
+        numHours,
+        sundayHours,
+        otHours,
+        allowancePerDay,
+        advance,
+        salaryPerHour,
+        sundayPayRate,
+        otPayRate,
+        salaryForDays,
+        salaryForHours,
+        salaryForSunday,
+        salaryForOT,
+        totalAllowance,
+        totalSalary,
+        balance,
+      };
+    }
+
+    function hideSuggestions() {
+      $("nameSuggestions").style.display = "none";
+      $("nameSuggestions").innerHTML = "";
+    }
+
+    async function fetchSuggestions(q) {
+      const res = await fetch("/api/employees/search?q=" + encodeURIComponent(q));
+      if (!res.ok) return [];
+      return res.json();
+    }
+
+    function renderSuggestions(items) {
+      const box = $("nameSuggestions");
+      box.innerHTML = "";
+      if (!items.length) {
+        hideSuggestions();
+        return;
+      }
+      items.forEach((row) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.textContent = row.name;
+        b.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          $("employeeName").value = row.name;
+          $("employeeIc").value = row.ic;
+          $("salaryPerDay").value = row.dailyRate || "";
+          selectedFromList = true;
+          hideSuggestions();
+          calculateSalary();
+        });
+        box.appendChild(b);
+      });
+      box.style.display = "block";
+    }
+
+    $("employeeName").addEventListener("input", () => {
+      selectedFromList = false;
+      const q = $("employeeName").value.trim();
+      clearTimeout(searchTimer);
+      if (!q) {
+        hideSuggestions();
+        return;
+      }
+      searchTimer = setTimeout(async () => {
+        const items = await fetchSuggestions(q);
+        renderSuggestions(items);
+      }, 200);
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".autocomplete-wrap")) hideSuggestions();
+    });
+
+    const inputs = [
+      "salaryPerDay",
+      "numDays",
+      "numHours",
+      "sundayHours",
+      "otHours",
+      "allowancePerDay",
+      "advance",
+    ];
+    inputs.forEach((id) => {
+      $(id).addEventListener("input", () => calculateSalary());
+    });
+
+    function setMode(mode) {
+      const root = $("app-root");
+      const previewPanel = $("preview-panel");
+      const viewport = $("payslip-viewport");
+      if (mode === "preview") {
+        root.classList.add("mode-preview");
+        previewPanel.hidden = false;
+        viewport.hidden = false;
+      } else {
+        root.classList.remove("mode-preview");
+        previewPanel.hidden = true;
+        viewport.hidden = true;
+      }
+    }
+
+    /** Print numeric value as-is (trim trailing zeros after decimal). */
+    function formatExactNumber(n) {
+      const x = Number(n);
+      if (!Number.isFinite(x)) return "";
+      if (Number.isInteger(x)) return String(x);
+      return String(x)
+        .replace(/(\.\d*?)0+$/, "$1")
+        .replace(/\.$/, "");
+    }
+
+    function formatOtHoursWithHrs(n) {
+      const x = Number(n);
+      if (!Number.isFinite(x)) return "0 hrs";
+      const core = Number.isInteger(x) ? String(x) : formatExactNumber(x);
+      return `${core} hrs`;
+    }
+
+    /** Calculation column: prefix ending with ×, then one amount e.g. 120.00 */
+    function calcColText(prefixEndsWithX, rateValue) {
+      return `${prefixEndsWithX}${money(rateValue)}`;
+    }
+
+    function fillSlipFromDom() {
+      const c = calculateSalary();
+      const di = $("slipDateInput");
+      let dateStr = "";
+      if (di && di.value) {
+        const p = di.value.split("-");
+        if (p.length === 3) dateStr = `${p[2]}/${p[1]}/${p[0]}`;
+        else dateStr = di.value;
+      }
+      $("slipDate").textContent = dateStr;
+      $("slipName").textContent = $("employeeName").value.trim();
+      $("slipIc").textContent = $("employeeIc").value.trim();
+
+      setSlipLineOmit($("slipLineBasic"), c.salaryForDays, () => {
+        $("slipBasicCalc").textContent = calcColText(`${c.numDays} days×`, c.salaryPerDay);
+        setRMSen($("slipBasicTotalRM"), $("slipBasicTotalSen"), c.salaryForDays);
+      });
+
+      setSlipLineOmit($("slipLineOt"), c.salaryForOT, () => {
+        $("slipOtCalc").textContent = calcColText(`${c.otHours} hrs×`, c.otPayRate);
+        setRMSen($("slipOtTotalRM"), $("slipOtTotalSen"), c.salaryForOT);
+      });
+
+      setSlipLineOmit($("slipLineSunday"), c.salaryForSunday, () => {
+        $("slipSunCalc").textContent = calcColText(`Sunday ${c.sundayHours} hrs×`, c.sundayPayRate);
+        setRMSen($("slipSunTotalRM"), $("slipSunTotalSen"), c.salaryForSunday);
+      });
+
+      setSlipLineOmit($("slipLineAllow"), c.totalAllowance, () => {
+        $("slipAllowCalc").textContent = calcColText(`${c.numDays} days×`, c.allowancePerDay);
+        setRMSen($("slipAllowTotalRM"), $("slipAllowTotalSen"), c.totalAllowance);
+      });
+
+      setSlipLineOmit($("slipLineWh"), c.salaryForHours, () => {
+        $("slipWhCalc").textContent = calcColText(`${c.numHours} hrs×`, c.salaryPerHour);
+        setRMSen($("slipWhTotalRM"), $("slipWhTotalSen"), c.salaryForHours);
+      });
+
+      const showOtDetail =
+        !isEffectivelyZero(c.otHours) || !isEffectivelyZero(c.salaryForOT);
+      setSlipLineOmit($("slipLineOtDetail"), showOtDetail ? 1 : 0, () => {
+        $("slipOtDetailRate").textContent = formatExactNumber(c.otPayRate);
+        $("slipOtDetailHours").textContent = formatOtHoursWithHrs(c.otHours);
+        $("slipOtDetailAmount").textContent = formatExactNumber(c.salaryForOT);
+      });
+
+      setSlipLineOmit($("slipLineGross"), c.totalSalary, () => {
+        setRMSen($("slipGrossRM"), $("slipGrossSen"), c.totalSalary);
+      });
+
+      setSlipLineOmit($("slipLineAdvance"), c.advance, () => {
+        setRMSen($("slipAdvanceRM"), $("slipAdvanceSen"), c.advance);
+      });
+
+      setSlipLineOmit($("slipLineReduction"), c.advance, () => {
+        setRMSen($("slipReductionRM"), $("slipReductionSen"), c.advance);
+      });
+
+      setSlipLineOmit($("slipLineBalance"), c.balance, () => {
+        setRMSen($("slipBalanceRM"), $("slipBalanceSen"), c.balance);
+      });
+
+      return c;
+    }
+
+    async function saveEmployeeIfNeeded() {
+      const name = $("employeeName").value.trim();
+      const ic = $("employeeIc").value.trim();
+      const dailyRate = $("salaryPerDay").value.trim();
+      if (!name) return { ok: false, error: "Name is required" };
+      if (selectedFromList) return { ok: true, skipped: true };
+
+      const res = await fetch("/api/employees", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, ic, dailyRate }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: data.error || "Save failed" };
+      return { ok: true, skipped: false, data };
+    }
+
+    $("btnRecalc").addEventListener("click", () => calculateSalary());
+
+    $("btnPreview").addEventListener("click", async () => {
+      calculateSalary();
+      const save = await saveEmployeeIfNeeded();
+      if (!save.ok) {
+        alert(save.error || "Could not save employee");
+        return;
+      }
+      fillSlipFromDom();
+      setMode("preview");
+    });
+
+    $("btnBackEdit").addEventListener("click", () => setMode("data"));
+
+    $("btnPrint").addEventListener("click", () => {
+      window.print();
+    });
+
+    calculateSalary();
+    (function initSlipDate() {
+      const el = $("slipDateInput");
+      if (el && !el.value) el.value = new Date().toISOString().slice(0, 10);
+    })();
+  </script>
+</body>
+</html>
