@@ -17,6 +17,33 @@
       color: #111;
     }
 
+    /* Navigation Menu */
+    .nav-menu {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #ccc;
+    }
+
+    .nav-menu a {
+      padding: 0.5rem 1rem;
+      text-decoration: none;
+      color: #333;
+      background: #ddd;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .nav-menu a:hover {
+      background: #ccc;
+    }
+
+    .nav-menu a.active {
+      background: #333;
+      color: #fff;
+    }
+
     h1 {
       font-size: 1.1rem;
       margin: 0 0 0.75rem;
@@ -388,6 +415,11 @@
   </style>
 </head>
 <body>
+  <nav class="nav-menu no-print">
+    <a href="/" class="active">Payslip Generator</a>
+    <a href="/advance">Advance Slip Generator</a>
+  </nav>
+
   <h1 class="no-print">Employee payslip (local)</h1>
 
   <div id="app-root">
@@ -396,22 +428,22 @@
         <legend>Employee</legend>
         <div class="row">
           <div class="autocomplete-wrap">
-            <label for="employeeName">Name</label>
-            <input type="text" id="employeeName" autocomplete="off" />
+            <label for="shared_name">Name</label>
+            <input type="text" id="shared_name" autocomplete="off" />
             <div id="nameSuggestions" role="listbox"></div>
             <p class="hint">Type to search. Pick a row to fill IC and daily rate, or enter a new employee manually.</p>
           </div>
           <div>
-            <label for="employeeIc">IC</label>
-            <input type="text" id="employeeIc" />
+            <label for="shared_ic">IC</label>
+            <input type="text" id="shared_ic" />
           </div>
           <div>
-            <label for="slipDateInput">Payslip date</label>
-            <input type="date" id="slipDateInput" />
+            <label for="shared_date">Payslip date</label>
+            <input type="date" id="shared_date" />
           </div>
           <div>
-            <label for="salaryPerDay">Daily rate</label>
-            <input type="number" id="salaryPerDay" step="0.01" min="0" />
+            <label for="shared_daily_rate">Daily rate</label>
+            <input type="number" id="shared_daily_rate" step="0.01" min="0" />
           </div>
         </div>
       </fieldset>
@@ -419,18 +451,19 @@
       <fieldset>
         <legend>Work &amp; pay inputs</legend>
         <div class="row">
-          <div><label for="numDays">Days worked</label><input type="number" id="numDays" step="0.5" min="0" /></div>
-          <div><label for="numHours">Hours (weekday)</label><input type="number" id="numHours" step="0.25" min="0" /></div>
-          <div><label for="sundayHours">Sunday hours</label><input type="number" id="sundayHours" step="0.25" min="0" /></div>
-          <div><label for="otHours">OT hours</label><input type="number" id="otHours" step="0.25" min="0" /></div>
-          <div><label for="allowancePerDay">Allowance / day</label><input type="number" id="allowancePerDay" step="0.01" min="0" /></div>
-          <div><label for="advance">Advance taken</label><input type="number" id="advance" step="0.01" min="0" /></div>
+          <div><label for="shared_num_days">Days worked</label><input type="number" id="shared_num_days" step="0.5" min="0" /></div>
+          <div><label for="shared_num_hours">Hours (weekday)</label><input type="number" id="shared_num_hours" step="0.25" min="0" /></div>
+          <div><label for="shared_sunday_hours">Sunday hours</label><input type="number" id="shared_sunday_hours" step="0.25" min="0" /></div>
+          <div><label for="shared_ot_hours">OT hours</label><input type="number" id="shared_ot_hours" step="0.25" min="0" /></div>
+          <div><label for="shared_allowance">Allowance / day</label><input type="number" id="shared_allowance" step="0.01" min="0" /></div>
+          <div><label for="shared_advance">Advance taken</label><input type="number" id="shared_advance" step="0.01" min="0" /></div>
         </div>
       </fieldset>
 
       <div class="actions">
         <button type="button" class="action" id="btnRecalc">Recalculate</button>
         <button type="button" class="action" id="btnPreview">Preview payslip</button>
+        <button type="button" class="action" id="btnClear" style="background: #ffcccc; border-color: #cc0000;">Clear Form (Next Employee)</button>
       </div>
 
       <div class="calc-block">
@@ -525,8 +558,59 @@
   <script>
     let selectedFromList = false;
     let searchTimer = null;
+    let isProgrammaticUpdate = false; // Flag to prevent infinite loops
 
     const $ = (id) => document.getElementById(id);
+
+    // ==================== SESSION STORAGE SYNC ====================
+    
+    // 1. Target all inputs
+    const inputs = {
+      name: document.getElementById('shared_name'),
+      date: document.getElementById('shared_date'),
+      advance: document.getElementById('shared_advance'),
+      ic: document.getElementById('shared_ic'),
+      dailyRate: document.getElementById('shared_daily_rate'),
+      numDays: document.getElementById('shared_num_days'),
+      numHours: document.getElementById('shared_num_hours'),
+      sundayHours: document.getElementById('shared_sunday_hours'),
+      otHours: document.getElementById('shared_ot_hours'),
+      allowance: document.getElementById('shared_allowance')
+    };
+
+    // 2. Save all fields to memory
+    const saveAllToMemory = () => {
+      for (const key in inputs) {
+        if (inputs[key]) sessionStorage.setItem(`sync_${key}`, inputs[key].value);
+      }
+      // Also trigger calculation when typing
+      if (typeof calculateSalary === 'function') calculateSalary(); 
+    };
+
+    // 3. Load all fields from memory on load
+    document.addEventListener('DOMContentLoaded', () => {
+      for (const key in inputs) {
+        if (inputs[key] && sessionStorage.getItem(`sync_${key}`)) {
+          inputs[key].value = sessionStorage.getItem(`sync_${key}`);
+        }
+      }
+      // Instantly calculate totals based on restored data
+      if (typeof calculateSalary === 'function') calculateSalary();
+      
+      // Do NOT trigger input event on name to avoid showing autocomplete dropdown
+      // The autocomplete should only show when user types, not when loading saved data
+    });
+
+    // 4. Attach event listeners to all inputs
+    for (const key in inputs) {
+      if (inputs[key]) {
+        inputs[key].addEventListener('input', saveAllToMemory);
+        // If it's a select or autocomplete, listen to change as well
+        inputs[key].addEventListener('change', saveAllToMemory); 
+      }
+    }
+
+    // ==================== END SESSION STORAGE SYNC ====================
 
     function money(n) {
       const x = Number(n);
@@ -575,13 +659,13 @@
     }
 
     function calculateSalary() {
-      const salaryPerDay = parseFloat($("salaryPerDay").value) || 0;
-      const numDays = parseFloat($("numDays").value) || 0;
-      const numHours = parseFloat($("numHours").value) || 0;
-      const sundayHours = parseFloat($("sundayHours").value) || 0;
-      const otHours = parseFloat($("otHours").value) || 0;
-      const allowancePerDay = parseFloat($("allowancePerDay").value) || 0;
-      const advance = parseFloat($("advance").value) || 0;
+      const salaryPerDay = parseFloat($("shared_daily_rate").value) || 0;
+      const numDays = parseFloat($("shared_num_days").value) || 0;
+      const numHours = parseFloat($("shared_num_hours").value) || 0;
+      const sundayHours = parseFloat($("shared_sunday_hours").value) || 0;
+      const otHours = parseFloat($("shared_ot_hours").value) || 0;
+      const allowancePerDay = parseFloat($("shared_allowance").value) || 0;
+      const advance = parseFloat($("shared_advance").value) || 0;
 
       const salaryPerHour = parseFloat((salaryPerDay / 8).toFixed(2));
       const sundayPayRate = parseFloat(((salaryPerDay * 2) / 8).toFixed(2));
@@ -654,9 +738,9 @@
         b.textContent = row.name;
         b.addEventListener("mousedown", (e) => {
           e.preventDefault();
-          $("employeeName").value = row.name;
-          $("employeeIc").value = row.ic;
-          $("salaryPerDay").value = row.dailyRate || "";
+          $("shared_name").value = row.name;
+          $("shared_ic").value = row.ic;
+          $("shared_daily_rate").value = row.dailyRate || "";
           selectedFromList = true;
           hideSuggestions();
           calculateSalary();
@@ -666,9 +750,9 @@
       box.style.display = "block";
     }
 
-    $("employeeName").addEventListener("input", () => {
+    $("shared_name").addEventListener("input", () => {
       selectedFromList = false;
-      const q = $("employeeName").value.trim();
+      const q = $("shared_name").value.trim();
       clearTimeout(searchTimer);
       if (!q) {
         hideSuggestions();
@@ -684,16 +768,16 @@
       if (!e.target.closest(".autocomplete-wrap")) hideSuggestions();
     });
 
-    const inputs = [
-      "salaryPerDay",
-      "numDays",
-      "numHours",
-      "sundayHours",
-      "otHours",
-      "allowancePerDay",
-      "advance",
+    const calculationInputs = [
+      "shared_daily_rate",
+      "shared_num_days",
+      "shared_num_hours",
+      "shared_sunday_hours",
+      "shared_ot_hours",
+      "shared_allowance",
+      "shared_advance",
     ];
-    inputs.forEach((id) => {
+    calculationInputs.forEach((id) => {
       $(id).addEventListener("input", () => calculateSalary());
     });
 
@@ -736,7 +820,7 @@
 
     function fillSlipFromDom() {
       const c = calculateSalary();
-      const di = $("slipDateInput");
+      const di = $("shared_date");
       let dateStr = "";
       if (di && di.value) {
         const p = di.value.split("-");
@@ -744,8 +828,8 @@
         else dateStr = di.value;
       }
       $("slipDate").textContent = dateStr;
-      $("slipName").textContent = $("employeeName").value.trim();
-      $("slipIc").textContent = $("employeeIc").value.trim();
+      $("slipName").textContent = $("shared_name").value.trim();
+      $("slipIc").textContent = $("shared_ic").value.trim();
 
       setSlipLineOmit($("slipLineBasic"), c.salaryForDays, () => {
         $("slipBasicCalc").textContent = calcColText(`${c.numDays} days×`, c.salaryPerDay);
@@ -800,9 +884,9 @@
     }
 
     async function saveEmployeeIfNeeded() {
-      const name = $("employeeName").value.trim();
-      const ic = $("employeeIc").value.trim();
-      const dailyRate = $("salaryPerDay").value.trim();
+      const name = $("shared_name").value.trim();
+      const ic = $("shared_ic").value.trim();
+      const dailyRate = $("shared_daily_rate").value.trim();
       if (!name) return { ok: false, error: "Name is required" };
       if (selectedFromList) return { ok: true, skipped: true };
 
@@ -825,19 +909,44 @@
         alert(save.error || "Could not save employee");
         return;
       }
+      
+      // Note: Data is already auto-saved to sessionStorage in real-time via input event listeners
+      // No need to manually save here anymore
+      
       fillSlipFromDom();
       setMode("preview");
+    });
+
+    $("btnClear").addEventListener("click", () => {
+      // Clear all form inputs
+      $("shared_name").value = "";
+      $("shared_ic").value = "";
+      $("shared_date").value = new Date().toISOString().slice(0, 10);
+      $("shared_daily_rate").value = "";
+      $("shared_num_days").value = "";
+      $("shared_num_hours").value = "";
+      $("shared_sunday_hours").value = "";
+      $("shared_ot_hours").value = "";
+      $("shared_allowance").value = "";
+      $("shared_advance").value = "";
+      
+      // Clear sessionStorage
+      sessionStorage.clear();
+      
+      // Recalculate to update display
+      calculateSalary();
     });
 
     $("btnBackEdit").addEventListener("click", () => setMode("data"));
 
     $("btnPrint").addEventListener("click", () => {
       window.print();
+      // NOTE: Data persists in sessionStorage until user explicitly clicks "Clear Form (Next Employee)"
     });
 
     calculateSalary();
     (function initSlipDate() {
-      const el = $("slipDateInput");
+      const el = $("shared_date");
       if (el && !el.value) el.value = new Date().toISOString().slice(0, 10);
     })();
   </script>

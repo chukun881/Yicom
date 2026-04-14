@@ -8,6 +8,7 @@ from flask import Flask, jsonify, render_template, request
 
 BASE_DIR = Path(__file__).resolve().parent
 CSV_PATH = BASE_DIR / "employees.csv"
+SITES_PATH = BASE_DIR / "sites.csv"
 FIELDNAMES = ["Name", "IC", "Daily Rate"]
 
 
@@ -16,6 +17,12 @@ def _ensure_csv() -> None:
         with CSV_PATH.open("w", newline="", encoding="utf-8") as f:
             w = csv.DictWriter(f, fieldnames=FIELDNAMES)
             w.writeheader()
+
+
+def _ensure_sites_csv() -> None:
+    if not SITES_PATH.exists():
+        with SITES_PATH.open("w", newline="", encoding="utf-8") as f:
+            f.write("Site\n")
 
 
 def _read_all_rows() -> list[dict[str, str]]:
@@ -43,6 +50,11 @@ app = Flask(__name__)
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/advance")
+def advance():
+    return render_template("advance.html")
 
 
 @app.get("/api/employees/search")
@@ -88,6 +100,64 @@ def upsert_employee():
     rows.append({"Name": name, "IC": ic, "Daily Rate": daily_rate})
     _write_all_rows(rows)
     return jsonify({"ok": True, "updated": False})
+
+
+@app.get("/api/sites")
+def get_sites():
+    """Get list of all sites from sites.csv, cleaned and deduplicated"""
+    _ensure_sites_csv()
+    sites = []
+    seen = set()
+    with SITES_PATH.open(newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            site_name = row.get("Site", "").strip()
+            # Only add non-empty, non-duplicate sites
+            if site_name and site_name not in seen:
+                sites.append(site_name)
+                seen.add(site_name)
+    return jsonify(sites)
+
+
+@app.post("/api/sites")
+def save_site():
+    """Save a new site to sites.csv with sanitization"""
+    data = request.get_json(silent=True) or {}
+    site_raw = data.get("site", "").strip()
+    
+    if not site_raw:
+        return jsonify({"ok": False, "error": "Site name is required"}), 400
+    
+    # Data sanitization: convert to Title Case
+    # e.g., " project alpha " becomes "Project Alpha"
+    site_sanitized = site_raw.title()
+    
+    # Read existing sites to check for duplicates
+    _ensure_sites_csv()
+    existing_sites = []
+    with SITES_PATH.open(newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            site_name = row.get("Site", "").strip()
+            if site_name:
+                existing_sites.append(site_name)
+    
+    # Check if site already exists (case-insensitive)
+    for existing in existing_sites:
+        if existing.lower() == site_sanitized.lower():
+            return jsonify({"ok": True, "saved": False, "message": "Site already exists"})
+    
+    # Append new site to the list
+    existing_sites.append(site_sanitized)
+    
+    # Rewrite the entire file with proper newlines
+    with SITES_PATH.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["Site"])
+        writer.writeheader()
+        for site in existing_sites:
+            writer.writerow({"Site": site})
+    
+    return jsonify({"ok": True, "saved": True, "site": site_sanitized})
 
 
 if __name__ == "__main__":

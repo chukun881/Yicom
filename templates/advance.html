@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Advance Slip (local)</title>
+  <style>
+    :root {
+      font-family: system-ui, sans-serif;
+      line-height: 1.4;
+    }
+
+    body {
+      margin: 0;
+      padding: 1rem;
+      background: #f4f4f4;
+      color: #111;
+    }
+
+    /* Navigation Menu */
+    .nav-menu {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #ccc;
+    }
+
+    .nav-menu a {
+      padding: 0.5rem 1rem;
+      text-decoration: none;
+      color: #333;
+      background: #ddd;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .nav-menu a:hover {
+      background: #ccc;
+    }
+
+    .nav-menu a.active {
+      background: #333;
+      color: #fff;
+    }
+
+    h1 {
+      font-size: 1.1rem;
+      margin: 0 0 0.75rem;
+      font-weight: 600;
+    }
+
+    fieldset {
+      border: 1px solid #ccc;
+      margin: 0 0 1rem;
+      padding: 0.75rem;
+      background: #fff;
+    }
+
+    legend {
+      padding: 0 0.35rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      margin: 0.35rem 0 0.15rem;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    select {
+      width: 100%;
+      max-width: 22rem;
+      padding: 0.35rem 0.45rem;
+      box-sizing: border-box;
+      border: 1px solid #aaa;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.25rem;
+    }
+
+    .row > div {
+      min-width: 10rem;
+    }
+
+    .autocomplete-wrap {
+      position: relative;
+      max-width: 22rem;
+    }
+
+    #nameSuggestions {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      z-index: 10;
+      background: #fff;
+      border: 1px solid #aaa;
+      border-top: none;
+      max-height: 10rem;
+      overflow-y: auto;
+      display: none;
+    }
+
+    #nameSuggestions button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 0.35rem 0.5rem;
+      border: none;
+      background: #fff;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    #nameSuggestions button:hover,
+    #nameSuggestions button:focus {
+      background: #e8e8e8;
+    }
+
+    #siteSuggestions {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      z-index: 10;
+      background: #fff;
+      border: 1px solid #aaa;
+      border-top: none;
+      max-height: 10rem;
+      overflow-y: auto;
+      display: none;
+    }
+
+    #siteSuggestions button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 0.35rem 0.5rem;
+      border: none;
+      background: #fff;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    #siteSuggestions button:hover,
+    #siteSuggestions button:focus {
+      background: #e8e8e8;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 0.5rem 0 1rem;
+    }
+
+    button.action {
+      padding: 0.45rem 0.75rem;
+      border: 1px solid #333;
+      background: #eee;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    button.action:hover {
+      background: #ddd;
+    }
+
+    .hint {
+      font-size: 0.8rem;
+      color: #444;
+      margin: 0.25rem 0 0;
+    }
+
+    /*
+      ADVANCE SLIP LAYOUT — coordinates from top-left of 5in × 4in sheet (cm).
+      Placeholder dimensions - user will update later.
+    */
+    .advance-sheet {
+      position: relative;
+      width: 5in;
+      height: 4in;
+      box-sizing: border-box;
+      background: #fff;
+    }
+
+    .advance-sheet .abs {
+      position: absolute;
+      white-space: nowrap;
+      font-size: 10pt;
+    }
+
+    /* Currency split for Advance Amount */
+    .advance-sheet .advance-currency-rm {
+      position: absolute;
+      width: 2cm;
+      max-width: 2cm;
+      text-align: right;
+      font-size: 10pt;
+      white-space: nowrap;
+    }
+
+    .advance-sheet .advance-currency-sen {
+      position: absolute;
+      text-align: left;
+      font-size: 10pt;
+      white-space: nowrap;
+    }
+
+    /* Position placeholders - user will update these coordinates */
+    #advSlipName {
+      top: 1cm;
+      left: 1cm;
+      font-size: 12pt;
+      font-weight: 600;
+    }
+
+    #advSlipSite {
+      top: 1.5cm;
+      left: 1cm;
+    }
+
+    #advSlipDate {
+      top: 2cm;
+      left: 1cm;
+    }
+
+    #advSlipAmountLabel {
+      top: 3cm;
+      left: 1cm;
+      font-weight: 600;
+    }
+
+    #advSlipAmountRM {
+      top: 3cm;
+      left: 4cm;
+    }
+
+    #advSlipAmountSen {
+      top: 3cm;
+      left: 6.1cm;
+    }
+
+    #advance-viewport {
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: #e2e2e2;
+      display: inline-block;
+    }
+
+    #advance-viewport .advance-sheet {
+      outline: 1px solid #333;
+      box-shadow: 0 0 0 1px #999;
+    }
+
+    .mode-preview #data-entry-panel {
+      display: none;
+    }
+
+    /* ISOLATED PRINT CSS FOR ADVANCE SLIP ONLY */
+    @media print {
+      @page {
+        size: 5in 4in;
+        margin: 0;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        background: #fff;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+
+      /* Hide navigation and all UI elements */
+      .nav-menu,
+      #data-entry-panel,
+      #preview-panel {
+        display: none !important;
+      }
+
+      #advance-viewport {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        display: block !important;
+      }
+
+      #advance-viewport .advance-sheet {
+        outline: none;
+        box-shadow: none;
+      }
+
+      .advance-sheet .advance-currency-rm {
+        width: 2cm;
+        max-width: 2cm;
+        text-align: right;
+      }
+
+      .advance-sheet .advance-currency-sen {
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav-menu no-print">
+    <a href="/">Payslip Generator</a>
+    <a href="/advance" class="active">Advance Slip Generator</a>
+  </nav>
+
+  <h1 class="no-print">Employee Advance Slip (local)</h1>
+
+  <div id="app-root">
+    <div id="data-entry-panel" class="no-print">
+      <fieldset>
+        <legend>Employee Information</legend>
+        <div class="row">
+          <div class="autocomplete-wrap">
+            <label for="shared_name">Name</label>
+            <input type="text" id="shared_name" autocomplete="off" />
+            <div id="nameSuggestions" role="listbox"></div>
+            <p class="hint">Type to search employee from database.</p>
+          </div>
+          <div class="autocomplete-wrap">
+            <label for="site">Site</label>
+            <input type="text" id="site" autocomplete="off" />
+            <div id="siteSuggestions" role="listbox"></div>
+            <p class="hint">Type to search or enter a new site.</p>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Advance Details</legend>
+        <div class="row">
+          <div>
+            <label for="shared_date">Date</label>
+            <input type="date" id="shared_date" />
+          </div>
+          <div>
+            <label for="shared_advance">Advance Amount (RM)</label>
+            <input type="number" id="shared_advance" step="0.01" min="0" />
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="actions">
+        <button type="button" class="action" id="btnPreview">Preview Advance Slip</button>
+        <button type="button" class="action" id="btnClear" style="background: #ffcccc; border-color: #cc0000;">Clear Form (Next Employee)</button>
+      </div>
+    </div>
+
+    <div id="preview-panel" class="no-print" hidden>
+      <div class="actions">
+        <button type="button" class="action" id="btnPrint">Print Advance Slip</button>
+        <button type="button" class="action" id="btnBackEdit">Back to data entry</button>
+      </div>
+      <p class="hint">Paper box is 5in × 4in. Positions are fixed in <code>cm</code> in CSS. Update coordinates as needed.</p>
+    </div>
+
+    <div id="advance-viewport" hidden>
+      <div id="advance-sheet" class="advance-sheet" aria-label="Advance Slip print area">
+        <span class="abs" id="advSlipName"></span>
+        <span class="abs" id="advSlipSite"></span>
+        <span class="abs" id="advSlipDate"></span>
+        <span class="abs" id="advSlipAmountLabel">RM</span>
+        <span class="advance-currency-rm abs" id="advSlipAmountRM"></span>
+        <span class="advance-currency-sen abs" id="advSlipAmountSen"></span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let selectedFromList = false;
+    let searchTimer = null;
+    let isProgrammaticUpdate = false; // Flag to prevent infinite loops
+
+    const $ = (id) => document.getElementById(id);
+
+    // ==================== SESSION STORAGE SYNC ====================
+    
+    // ONE-WAY SYNC: Advance Slip follows Payslip Generator (source of truth)
+    // Advance Slip only READS from sessionStorage, does NOT write back
+    
+    // 1. Target the shared IDs
+    const nameInput = document.getElementById('shared_name');
+    const dateInput = document.getElementById('shared_date');
+    const advInput = document.getElementById('shared_advance');
+    const siteInput = document.getElementById('site');
+
+    // 2. Load from payslip generator's memory keys on load
+    document.addEventListener('DOMContentLoaded', () => {
+      // Load shared fields from sessionStorage
+      if (nameInput && sessionStorage.getItem('sync_name')) {
+        nameInput.value = sessionStorage.getItem('sync_name');
+        // Do NOT trigger input event to avoid showing autocomplete dropdown
+      }
+      if (dateInput && sessionStorage.getItem('sync_date')) {
+        dateInput.value = sessionStorage.getItem('sync_date');
+      }
+      if (advInput && sessionStorage.getItem('sync_advance')) {
+        advInput.value = sessionStorage.getItem('sync_advance');
+      }
+      
+      // Load site from sessionStorage (advance slip specific)
+      if (siteInput && sessionStorage.getItem('sync_site')) {
+        siteInput.value = sessionStorage.getItem('sync_site');
+      }
+    });
+    
+    // Save site to sessionStorage on input (site is advance slip specific)
+    if (siteInput) {
+      siteInput.addEventListener('input', () => {
+        sessionStorage.setItem('sync_site', siteInput.value);
+      });
+    }
+    
+    // NOTE: We do NOT attach input event listeners to save name/date/advance to sessionStorage
+    // This ensures payslip.html remains the source of truth for those fields
+    // Changes made on advance.html will NOT sync back to payslip.html for those fields
+
+    // ==================== END SESSION STORAGE SYNC ====================
+
+    /**
+     * Split a currency amount into Ringgit (whole) and Sen (two digits, no decimal printed).
+     * Example: 123.5 -> { rm: "123", sen: "50" }; 45 -> { rm: "45", sen: "00" }.
+     */
+    function splitRinggitSen(value) {
+      const x = Number(value);
+      if (!Number.isFinite(x)) return { rm: "0", sen: "00" };
+      const sign = x < 0 ? "-" : "";
+      const abs = Math.abs(x);
+      const cents = Math.round(abs * 100 + Number.EPSILON);
+      const rmPart = Math.floor(cents / 100);
+      const senPart = cents % 100;
+      return {
+        rm: sign + String(rmPart),
+        sen: String(senPart).padStart(2, "0"),
+      };
+    }
+
+    function setRMSen(elRm, elSen, value) {
+      const { rm, sen } = splitRinggitSen(value);
+      elRm.textContent = rm;
+      elSen.textContent = sen;
+    }
+
+    function hideSuggestions() {
+      $("nameSuggestions").style.display = "none";
+      $("nameSuggestions").innerHTML = "";
+      $("siteSuggestions").style.display = "none";
+      $("siteSuggestions").innerHTML = "";
+    }
+
+    async function fetchSuggestions(q) {
+      const res = await fetch("/api/employees/search?q=" + encodeURIComponent(q));
+      if (!res.ok) return [];
+      return res.json();
+    }
+
+    function renderSuggestions(items) {
+      const box = $("nameSuggestions");
+      box.innerHTML = "";
+      if (!items.length) {
+        hideSuggestions();
+        return;
+      }
+      items.forEach((row) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.textContent = row.name;
+        b.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          $("shared_name").value = row.name;
+          selectedFromList = true;
+          hideSuggestions();
+        });
+        box.appendChild(b);
+      });
+      box.style.display = "block";
+    }
+
+    $("shared_name").addEventListener("input", () => {
+      selectedFromList = false;
+      const q = $("shared_name").value.trim();
+      clearTimeout(searchTimer);
+      if (!q) {
+        hideSuggestions();
+        return;
+      }
+      searchTimer = setTimeout(async () => {
+        const items = await fetchSuggestions(q);
+        renderSuggestions(items);
+      }, 200);
+    });
+
+    // Site autocomplete functionality
+    let siteSearchTimer = null;
+
+    async function fetchSiteSuggestions(q) {
+      const sites = await fetchSites();
+      if (!q) return [];
+      const lowerQ = q.toLowerCase();
+      return sites.filter(site => site.toLowerCase().includes(lowerQ));
+    }
+
+    function renderSiteSuggestions(items) {
+      const box = $("siteSuggestions");
+      box.innerHTML = "";
+      if (!items.length) {
+        $("siteSuggestions").style.display = "none";
+        return;
+      }
+      items.forEach((site) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.textContent = site;
+        b.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          $("site").value = site;
+          // Save selected site to sessionStorage
+          sessionStorage.setItem('sync_site', site);
+          $("siteSuggestions").style.display = "none";
+          $("siteSuggestions").innerHTML = "";
+        });
+        box.appendChild(b);
+      });
+      box.style.display = "block";
+    }
+
+    $("site").addEventListener("input", () => {
+      const q = $("site").value.trim();
+      clearTimeout(siteSearchTimer);
+      if (!q) {
+        $("siteSuggestions").style.display = "none";
+        return;
+      }
+      siteSearchTimer = setTimeout(async () => {
+        const items = await fetchSiteSuggestions(q);
+        renderSiteSuggestions(items);
+      }, 200);
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".autocomplete-wrap")) hideSuggestions();
+    });
+
+    function setMode(mode) {
+      const root = $("app-root");
+      const previewPanel = $("preview-panel");
+      const viewport = $("advance-viewport");
+      if (mode === "preview") {
+        root.classList.add("mode-preview");
+        previewPanel.hidden = false;
+        viewport.hidden = false;
+      } else {
+        root.classList.remove("mode-preview");
+        previewPanel.hidden = true;
+        viewport.hidden = true;
+      }
+    }
+
+    function fillSlipFromDom() {
+      // Format date
+      const dateInput = $("shared_date");
+      let dateStr = "";
+      if (dateInput && dateInput.value) {
+        const p = dateInput.value.split("-");
+        if (p.length === 3) dateStr = `${p[2]}/${p[1]}/${p[0]}`;
+        else dateStr = dateInput.value;
+      }
+
+      $("advSlipName").textContent = $("shared_name").value.trim();
+      $("advSlipSite").textContent = $("site").value.trim();
+      $("advSlipDate").textContent = dateStr;
+
+      const advanceAmount = parseFloat($("shared_advance").value) || 0;
+      setRMSen($("advSlipAmountRM"), $("advSlipAmountSen"), advanceAmount);
+    }
+
+    async function fetchSites() {
+      const res = await fetch("/api/sites");
+      if (!res.ok) return [];
+      return res.json();
+    }
+
+    async function saveSiteIfNeeded(siteName) {
+      if (!siteName || !siteName.trim()) return;
+      
+      try {
+        const res = await fetch("/api/sites", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ site: siteName.trim() }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          console.log("Site saved:", data);
+        }
+      } catch (error) {
+        console.error("Error saving site:", error);
+      }
+    }
+
+    $("btnPreview").addEventListener("click", async () => {
+      const name = $("shared_name").value.trim();
+      if (!name) {
+        alert("Please enter employee name");
+        return;
+      }
+      
+      // Save site if it's a new entry
+      const site = $("site").value.trim();
+      await saveSiteIfNeeded(site);
+      
+      fillSlipFromDom();
+      setMode("preview");
+    });
+
+    $("btnBackEdit").addEventListener("click", () => setMode("data"));
+
+    $("btnPrint").addEventListener("click", () => {
+      window.print();
+      // NOTE: Data persists in sessionStorage until user explicitly clicks "Clear Form (Next Employee)"
+    });
+
+    // Clear Form button handler
+    $("btnClear").addEventListener("click", () => {
+      // Clear all form inputs
+      $("shared_name").value = "";
+      $("site").value = "";
+      $("shared_date").value = new Date().toISOString().slice(0, 10);
+      $("shared_advance").value = "";
+      
+      // Clear sessionStorage (including site)
+      sessionStorage.clear();
+    });
+
+    // Initialize date to today
+    (function initDate() {
+      const el = $("shared_date");
+      if (el && !el.value) el.value = new Date().toISOString().slice(0, 10);
+    })();
+  </script>
+</body>
+</html>
