@@ -438,8 +438,25 @@
             <input type="text" id="shared_ic" />
           </div>
           <div>
-            <label for="shared_date">Payslip date</label>
-            <input type="date" id="shared_date" />
+            <label>Payslip Month & Year</label>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <select id="shared_month" style="flex: 1; max-width: 12rem;">
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7">July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+              </select>
+              <input type="number" id="shared_year" min="2020" max="2100" style="flex: 1; max-width: 8rem;" placeholder="Year" />
+            </div>
+            <p class="hint">Day automatically set: 28th for February, 30th for other months</p>
           </div>
           <div>
             <label for="shared_daily_rate">Daily rate</label>
@@ -564,10 +581,27 @@
 
     // ==================== SESSION STORAGE SYNC ====================
     
-    // 1. Target all inputs
+    // Function to get last day of month (28 for Feb, 30 for others)
+    function getLastDayOfMonth(month, year) {
+      if (parseInt(month) === 2) {
+        return 28; // February always 28th
+      }
+      return 30; // All other months 30th
+    }
+    
+    // Function to get formatted date string from month and year
+    function getFormattedDate() {
+      const month = $("shared_month").value;
+      const year = $("shared_year").value;
+      const day = getLastDayOfMonth(month, year);
+      return `${year}-${month.padStart(2, '0')}-${day}`;
+    }
+    
+    // 1. Target all inputs (date replaced with month/year)
     const inputs = {
       name: document.getElementById('shared_name'),
-      date: document.getElementById('shared_date'),
+      month: document.getElementById('shared_month'),
+      year: document.getElementById('shared_year'),
       advance: document.getElementById('shared_advance'),
       ic: document.getElementById('shared_ic'),
       dailyRate: document.getElementById('shared_daily_rate'),
@@ -594,6 +628,13 @@
           inputs[key].value = sessionStorage.getItem(`sync_${key}`);
         }
       }
+      // Initialize month/year to current date if not set
+      if (!sessionStorage.getItem('sync_month')) {
+        const now = new Date();
+        $("shared_month").value = String(now.getMonth() + 1);
+        $("shared_year").value = String(now.getFullYear());
+      }
+      
       // Instantly calculate totals based on restored data
       if (typeof calculateSalary === 'function') calculateSalary();
       
@@ -820,14 +861,16 @@
 
     function fillSlipFromDom() {
       const c = calculateSalary();
-      const di = $("shared_date");
-      let dateStr = "";
-      if (di && di.value) {
-        const p = di.value.split("-");
-        if (p.length === 3) dateStr = `${p[2]}/${p[1]}/${p[0]}`;
-        else dateStr = di.value;
+      // Use getFormattedDate to get the date from month/year
+      const dateStr = getFormattedDate();
+      if (dateStr) {
+        const p = dateStr.split("-");
+        if (p.length === 3) {
+          $("slipDate").textContent = `${p[2]}/${p[1]}/${p[0]}`;
+        } else {
+          $("slipDate").textContent = dateStr;
+        }
       }
-      $("slipDate").textContent = dateStr;
       $("slipName").textContent = $("shared_name").value.trim();
       $("slipIc").textContent = $("shared_ic").value.trim();
 
@@ -921,7 +964,10 @@
       // Clear all form inputs
       $("shared_name").value = "";
       $("shared_ic").value = "";
-      $("shared_date").value = new Date().toISOString().slice(0, 10);
+      // Reset month/year to current date
+      const now = new Date();
+      $("shared_month").value = String(now.getMonth() + 1);
+      $("shared_year").value = String(now.getFullYear());
       $("shared_daily_rate").value = "";
       $("shared_num_days").value = "";
       $("shared_num_hours").value = "";
@@ -945,10 +991,6 @@
     });
 
     calculateSalary();
-    (function initSlipDate() {
-      const el = $("shared_date");
-      if (el && !el.value) el.value = new Date().toISOString().slice(0, 10);
-    })();
   </script>
 </body>
 </html>

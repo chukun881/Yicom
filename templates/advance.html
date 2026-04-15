@@ -343,8 +343,25 @@
         <legend>Advance Details</legend>
         <div class="row">
           <div>
-            <label for="shared_date">Date</label>
-            <input type="date" id="shared_date" />
+            <label>Advance Month & Year</label>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <select id="shared_month" style="flex: 1; max-width: 12rem;">
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7">July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+              </select>
+              <input type="number" id="shared_year" min="2020" max="2100" style="flex: 1; max-width: 8rem;" placeholder="Year" />
+            </div>
+            <p class="hint">Day automatically set: 28th for February, 30th for other months</p>
           </div>
           <div>
             <label for="shared_advance">Advance Amount (RM)</label>
@@ -388,12 +405,29 @@
 
     // ==================== SESSION STORAGE SYNC ====================
     
+    // Function to get last day of month (28 for Feb, 30 for others)
+    function getLastDayOfMonth(month, year) {
+      if (parseInt(month) === 2) {
+        return 28; // February always 28th
+      }
+      return 30; // All other months 30th
+    }
+    
+    // Function to get formatted date string from month and year
+    function getFormattedDate() {
+      const month = $("shared_month").value;
+      const year = $("shared_year").value;
+      const day = getLastDayOfMonth(month, year);
+      return `${year}-${month.padStart(2, '0')}-${day}`;
+    }
+    
     // ONE-WAY SYNC: Advance Slip follows Payslip Generator (source of truth)
     // Advance Slip only READS from sessionStorage, does NOT write back
     
     // 1. Target the shared IDs
     const nameInput = document.getElementById('shared_name');
-    const dateInput = document.getElementById('shared_date');
+    const monthInput = document.getElementById('shared_month');
+    const yearInput = document.getElementById('shared_year');
     const advInput = document.getElementById('shared_advance');
     const siteInput = document.getElementById('site');
 
@@ -404,8 +438,11 @@
         nameInput.value = sessionStorage.getItem('sync_name');
         // Do NOT trigger input event to avoid showing autocomplete dropdown
       }
-      if (dateInput && sessionStorage.getItem('sync_date')) {
-        dateInput.value = sessionStorage.getItem('sync_date');
+      if (monthInput && sessionStorage.getItem('sync_month')) {
+        monthInput.value = sessionStorage.getItem('sync_month');
+      }
+      if (yearInput && sessionStorage.getItem('sync_year')) {
+        yearInput.value = sessionStorage.getItem('sync_year');
       }
       if (advInput && sessionStorage.getItem('sync_advance')) {
         advInput.value = sessionStorage.getItem('sync_advance');
@@ -414,6 +451,13 @@
       // Load site from sessionStorage (advance slip specific)
       if (siteInput && sessionStorage.getItem('sync_site')) {
         siteInput.value = sessionStorage.getItem('sync_site');
+      }
+      
+      // Initialize month/year to current date if not set
+      if (!sessionStorage.getItem('sync_month')) {
+        const now = new Date();
+        if (monthInput) monthInput.value = String(now.getMonth() + 1);
+        if (yearInput) yearInput.value = String(now.getFullYear());
       }
     });
     
@@ -424,7 +468,7 @@
       });
     }
     
-    // NOTE: We do NOT attach input event listeners to save name/date/advance to sessionStorage
+    // NOTE: We do NOT attach input event listeners to save name/month/year/advance to sessionStorage
     // This ensures payslip.html remains the source of truth for those fields
     // Changes made on advance.html will NOT sync back to payslip.html for those fields
 
@@ -570,18 +614,19 @@
     }
 
     function fillSlipFromDom() {
-      // Format date
-      const dateInput = $("shared_date");
-      let dateStr = "";
-      if (dateInput && dateInput.value) {
-        const p = dateInput.value.split("-");
-        if (p.length === 3) dateStr = `${p[2]}/${p[1]}/${p[0]}`;
-        else dateStr = dateInput.value;
+      // Use getFormattedDate to get the date from month/year
+      const dateStr = getFormattedDate();
+      if (dateStr) {
+        const p = dateStr.split("-");
+        if (p.length === 3) {
+          $("advSlipDate").textContent = `${p[2]}/${p[1]}/${p[0]}`;
+        } else {
+          $("advSlipDate").textContent = dateStr;
+        }
       }
 
       $("advSlipName").textContent = $("shared_name").value.trim();
       $("advSlipSite").textContent = $("site").value.trim();
-      $("advSlipDate").textContent = dateStr;
 
       const advanceAmount = parseFloat($("shared_advance").value) || 0;
       setRMSen($("advSlipAmountRM"), $("advSlipAmountSen"), advanceAmount);
@@ -638,18 +683,15 @@
       // Clear all form inputs
       $("shared_name").value = "";
       $("site").value = "";
-      $("shared_date").value = new Date().toISOString().slice(0, 10);
+      // Reset month/year to current date
+      const now = new Date();
+      $("shared_month").value = String(now.getMonth() + 1);
+      $("shared_year").value = String(now.getFullYear());
       $("shared_advance").value = "";
       
       // Clear sessionStorage (including site)
       sessionStorage.clear();
     });
-
-    // Initialize date to today
-    (function initDate() {
-      const el = $("shared_date");
-      if (el && !el.value) el.value = new Date().toISOString().slice(0, 10);
-    })();
   </script>
 </body>
 </html>
