@@ -179,13 +179,12 @@
     }
 
     /*
-      ADVANCE SLIP LAYOUT — coordinates from top-left of 5in × 4in sheet (cm).
-      Placeholder dimensions - user will update later.
+      ADVANCE SLIP LAYOUT — coordinates from top-left of 21.1cm × 15cm sheet (cm).
     */
     .advance-sheet {
       position: relative;
-      width: 5in;
-      height: 4in;
+      width: 21.1cm;
+      height: 15cm;
       box-sizing: border-box;
       background: #fff;
     }
@@ -196,55 +195,32 @@
       font-size: 10pt;
     }
 
-    /* Currency split for Advance Amount */
-    .advance-sheet .advance-currency-rm {
-      position: absolute;
-      width: 2cm;
-      max-width: 2cm;
-      text-align: right;
-      font-size: 10pt;
-      white-space: nowrap;
-    }
-
-    .advance-sheet .advance-currency-sen {
-      position: absolute;
-      text-align: left;
-      font-size: 10pt;
-      white-space: nowrap;
-    }
-
-    /* Position placeholders - user will update these coordinates */
+    /* Position coordinates for advance slip fields */
     #advSlipName {
-      top: 1cm;
-      left: 1cm;
+      top: 5.6cm;
+      left: 3.6cm;
       font-size: 12pt;
       font-weight: 600;
     }
 
     #advSlipSite {
-      top: 1.5cm;
-      left: 1cm;
+      top: 11.45cm;
+      left: 3.2cm;
     }
 
     #advSlipDate {
-      top: 2cm;
-      left: 1cm;
+      top: 4.7cm;
+      left: 15.2cm;
     }
 
-    #advSlipAmountLabel {
-      top: 3cm;
-      left: 1cm;
-      font-weight: 600;
+    #advSlipSiteAdv {
+      top: 6.7cm;
+      left: 6.55cm;
     }
 
-    #advSlipAmountRM {
-      top: 3cm;
-      left: 4cm;
-    }
-
-    #advSlipAmountSen {
-      top: 3cm;
-      left: 6.1cm;
+    #advSlipAmount {
+      top: 9.5cm;
+      left: 5.7cm;
     }
 
     #advance-viewport {
@@ -266,7 +242,7 @@
     /* ISOLATED PRINT CSS FOR ADVANCE SLIP ONLY */
     @media print {
       @page {
-        size: 5in 4in;
+        size: 21.1cm 15cm;
         margin: 0;
       }
 
@@ -297,16 +273,6 @@
       #advance-viewport .advance-sheet {
         outline: none;
         box-shadow: none;
-      }
-
-      .advance-sheet .advance-currency-rm {
-        width: 2cm;
-        max-width: 2cm;
-        text-align: right;
-      }
-
-      .advance-sheet .advance-currency-sen {
-        text-align: left;
       }
     }
   </style>
@@ -381,7 +347,7 @@
         <button type="button" class="action" id="btnPrint">Print Advance Slip</button>
         <button type="button" class="action" id="btnBackEdit">Back to data entry</button>
       </div>
-      <p class="hint">Paper box is 5in × 4in. Positions are fixed in <code>cm</code> in CSS. Update coordinates as needed.</p>
+      <p class="hint">Paper box is 21.1cm × 15cm. Positions are fixed in <code>cm</code> in CSS. Update coordinates as needed.</p>
     </div>
 
     <div id="advance-viewport" hidden>
@@ -389,9 +355,8 @@
         <span class="abs" id="advSlipName"></span>
         <span class="abs" id="advSlipSite"></span>
         <span class="abs" id="advSlipDate"></span>
-        <span class="abs" id="advSlipAmountLabel">RM</span>
-        <span class="advance-currency-rm abs" id="advSlipAmountRM"></span>
-        <span class="advance-currency-sen abs" id="advSlipAmountSen"></span>
+        <span class="abs" id="advSlipSiteAdv"></span>
+        <span class="abs" id="advSlipAmount"></span>
       </div>
     </div>
   </div>
@@ -613,6 +578,14 @@
       }
     }
 
+    function getMonthName(monthNum) {
+      const months = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+      ];
+      return months[parseInt(monthNum) - 1] || "";
+    }
+
     function fillSlipFromDom() {
       // Use getFormattedDate to get the date from month/year
       const dateStr = getFormattedDate();
@@ -628,8 +601,14 @@
       $("advSlipName").textContent = $("shared_name").value.trim();
       $("advSlipSite").textContent = $("site").value.trim();
 
+      // Populate "site ADV of [month and year]" field
+      const monthName = getMonthName($("shared_month").value);
+      const year = $("shared_year").value;
+      $("advSlipSiteAdv").textContent = `site ADV of ${monthName} ${year}`;
+
+      // Format advance amount as "RM [amount]/-"
       const advanceAmount = parseFloat($("shared_advance").value) || 0;
-      setRMSen($("advSlipAmountRM"), $("advSlipAmountSen"), advanceAmount);
+      $("advSlipAmount").textContent = `RM ${advanceAmount.toFixed(2)}/-`;
     }
 
     async function fetchSites() {

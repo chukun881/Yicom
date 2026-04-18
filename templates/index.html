@@ -202,74 +202,74 @@
     }
 
     #slipDate {
-      top: 2.5cm;
-      left: 12.5cm;
+      top: 2.6cm;
+      left: 13.0cm;
     }
     #slipName {
-      top: 3.7cm;
-      left: 2.6cm;
+      top: 3.9cm;
+      left: 2.8cm;
       font-size: 20pt;
       line-height: 1.1;
     }
     #slipIc {
-      top: 4cm;
-      left: 12.8cm;
+      top: 4.1cm;
+      left: 13.3cm;
     }
 
-    /* Basic pay row — shifted up 0.15cm */
+    /* Basic pay row */
     #slipBasicCalc {
-      top: 5.45cm;
+      top: 5.55cm;
       left: 4.8cm;
     }
     #slipBasicTotalRM {
-      top: 5.45cm;
-      left: 8cm;
+      top: 5.55cm;
+      left: 8.6cm;
     }
     #slipBasicTotalSen {
-      top: 5.45cm;
-      left: 9.85cm;
+      top: 5.55cm;
+      left: 10.35cm;
     }
 
     /* OT row */
     #slipOtCalc {
-      top: 5.95cm;
+      top: 6.075cm;
       left: 4.8cm;
     }
     #slipOtTotalRM {
-      top: 5.95cm;
-      left: 8cm;
+      top: 6.075cm;
+      left: 8.6cm;
     }
     #slipOtTotalSen {
-      top: 5.95cm;
-      left: 9.85cm;
+      top: 6.075cm;
+      left: 10.35cm;
     }
 
     /* Sunday row */
     #slipSunCalc {
-      top: 6.55cm;
+      top: 6.6cm;
       left: 4.8cm;
     }
     #slipSunTotalRM {
-      top: 6.55cm;
-      left: 8cm;
+      top: 6.6cm;
+      left: 8.6cm;
     }
     #slipSunTotalSen {
-      top: 6.55cm;
-      left: 9.85cm;
+      top: 6.6cm;
+      left: 10.35cm;
     }
 
     /* Allowance row */
     #slipAllowCalc {
-      top: 7.05cm;
+      top: 7.125cm;
       left: 4.8cm;
     }
     #slipAllowTotalRM {
-      top: 7.05cm;
-      left: 8cm;
+      top: 7.125cm;
+      left: 8.6cm;
     }
     #slipAllowTotalSen {
-      top: 7.05cm;
-      left: 9.85cm;
+      top: 7.125cm;
+      left: 10.35cm;
     }
 
     /* Work hours row */
@@ -279,77 +279,77 @@
     }
     #slipWhTotalRM {
       top: 7.65cm;
-      left: 8cm;
+      left: 8.6cm;
     }
     #slipWhTotalSen {
       top: 7.65cm;
-      left: 9.85cm;
+      left: 10.35cm;
     }
 
     /* OT breakdown strip */
     #slipOtDetailRate {
-      top: 6.9cm;
-      left: 11.1cm;
+      top: 6.75cm;
+      left: 11.5cm;
     }
     #slipOtDetailHours {
-      top: 6.9cm;
-      left: 13.5cm;
+      top: 6.75cm;
+      left: 13.9cm;
     }
     #slipOtDetailAmount {
-      top: 6.9cm;
-      left: 15.8cm;
+      top: 6.75cm;
+      left: 16.2cm;
     }
 
-    /* Gross pay 8.4cm */
+    /* Gross pay */
     #slipGrossRmWord {
-      top: 8.4cm;
-      left: 7.2cm;
+      top: 8.5cm;
+      left: 7.6cm;
     }
     #slipGrossRM {
-      top: 8.4cm;
-      left: 8cm;
+      top: 8.5cm;
+      left: 8.6cm;
     }
     #slipGrossSen {
-      top: 8.4cm;
-      left: 9.85cm;
+      top: 8.5cm;
+      left: 10.35cm;
     }
 
-    /* Advance 10.1cm */
+    /* Advance */
     #slipAdvanceRM {
-      top: 10.1cm;
-      left: 8cm;
+      top: 10.2cm;
+      left: 8.6cm;
     }
     #slipAdvanceSen {
-      top: 10.1cm;
-      left: 9.85cm;
+      top: 10.2cm;
+      left: 10.35cm;
     }
 
-    /* Total reduction 11.9cm */
+    /* Total reduction */
     #slipReductionRmWord {
-      top: 11.9cm;
-      left: 7.2cm;
+      top: 12.0cm;
+      left: 7.6cm;
     }
     #slipReductionRM {
-      top: 11.9cm;
-      left: 8cm;
+      top: 12.0cm;
+      left: 8.6cm;
     }
     #slipReductionSen {
-      top: 11.9cm;
-      left: 9.85cm;
+      top: 12.0cm;
+      left: 10.35cm;
     }
 
-    /* Balance 14.4cm — "Bal." aligned with "RM" labels */
+    /* Balance — "Bal." aligned with "RM" labels */
     #slipBalWord {
-      top: 14.4cm;
-      left: 7.2cm;
+      top: 14.5cm;
+      left: 7.6cm;
     }
     #slipBalanceRM {
-      top: 14.4cm;
-      left: 8cm;
+      top: 14.5cm;
+      left: 8.6cm;
     }
     #slipBalanceSen {
-      top: 14.4cm;
-      left: 9.85cm;
+      top: 14.5cm;
+      left: 10.35cm;
     }
 
     #payslip-viewport {
@@ -712,13 +712,13 @@
       const sundayPayRate = parseFloat(((salaryPerDay * 2) / 8).toFixed(2));
       const otPayRate = parseFloat((salaryPerHour * 1.5).toFixed(2));
 
-      const salaryForDays = salaryPerDay * numDays;
-      const salaryForHours = numHours * salaryPerHour;
-      const salaryForSunday = sundayHours * sundayPayRate;
-      const salaryForOT = otHours * otPayRate;
-      const totalAllowance = allowancePerDay * numDays;
-      const totalSalary = salaryForDays + salaryForHours + salaryForSunday + salaryForOT + totalAllowance;
-      const balance = totalSalary - advance;
+      const salaryForDays = parseFloat((salaryPerDay * numDays).toFixed(2));
+      const salaryForHours = parseFloat((numHours * salaryPerHour).toFixed(2));
+      const salaryForSunday = parseFloat((sundayHours * sundayPayRate).toFixed(2));
+      const salaryForOT = parseFloat((otHours * otPayRate).toFixed(2));
+      const totalAllowance = parseFloat((allowancePerDay * numDays).toFixed(2));
+      const totalSalary = parseFloat((salaryForDays + salaryForHours + salaryForSunday + salaryForOT + totalAllowance).toFixed(2));
+      const balance = parseFloat((totalSalary - advance).toFixed(2));
 
       $("lineSalaryDays").textContent =
         `${numDays} days × ${money(salaryPerDay)} = ${money(salaryForDays)}`;
